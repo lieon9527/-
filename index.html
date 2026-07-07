@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>冒险者公会：据点经营与远征</title>
+<style>
+:root{--bg:#0b1020;--panel:rgba(20,24,42,.96);--text:#eef2ff;--muted:#a8b0d5;--accent:#7c9cff;--good:#57d38c;--warn:#ffcb6b;--bad:#ff6b8b;--line:rgba(255,255,255,.08)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:linear-gradient(180deg,#090d1a 0%,#10162b 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+.app{max-width:1200px;margin:0 auto;padding:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 14px 30px rgba(0,0,0,.25)}
+h1,h2{margin:0 0 10px}
+p{color:var(--muted);line-height:1.55}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:14px;padding:11px 13px;color:var(--text);background:var(--accent);font-weight:700}
+button.secondary{background:#273154}
+button.good{background:#2fa862}
+button.warn{background:#d9a62f;color:#121212}
+button.bad{background:#d94c6f}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03)}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat .v{font-size:18px;font-weight:800;margin-top:4px}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:12px}
+.list{display:grid;gap:10px}
+.item{padding:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.03)}
+.head{display:flex;justify-content:space-between;gap:8px}
+.name{font-weight:800;font-size:16px}
+.tag{display:inline-block;margin-top:4px;padding:3px 8px;border-radius:999px;background:rgba(124,156,255,.16);font-size:12px}
+.mini{font-size:12px;color:var(--muted);line-height:1.5}
+.bar{height:9px;background:#222847;border-radius:999px;overflow:hidden;margin-top:5px}
+.bar>span{display:block;height:100%;border-radius:999px}
+.hp>span{background:linear-gradient(90deg,#5edb95,#2fb56c)}
+.sta>span{background:linear-gradient(90deg,#ffd66d,#d9a62f)}
+.xp>span{background:linear-gradient(90deg,#c78bff,#7c9cff)}
+.mana>span{background:linear-gradient(90deg,#71d8ff,#7c9cff)}
+.smallgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chip{padding:7px 9px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;color:var(--muted)}
+.log{height:320px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:3px}
+.entry{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:13px;line-height:1.45}
+.entry.good{border-color:rgba(87,211,140,.26)}
+.entry.warn{border-color:rgba(255,203,107,.26)}
+.entry.bad{border-color:rgba(255,107,139,.26)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:4px}
+.prog{height:8px;background:#232948;border-radius:999px;overflow:hidden;margin-top:6px}
+.prog>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c9cff,#9d6cff)}
+.footer{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.5}
+@media (max-width:960px){.grid,.two{grid-template-columns:1fr}.smallgrid{grid-template-columns:repeat(2,1fr)}.log{height:220px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="card">
+    <h1>冒险者公会：据点经营与远征</h1>
+    <p>招募冒险者、安排驻守、经营据点、派队远征、推进地图。粮食、木材、石料、金币、名望、士气和防御会彼此影响。</p>
+    <div class="row">
+      <button id="raid" class="warn">立即远征</button>
+      <button id="save" class="secondary">保存</button>
+      <button id="reset" class="bad">重开</button>
+    </div>
+  </div>
+
+  <div class="card stats" id="stats"></div>
+
+  <div class="tabs">
+    <button data-tab="hub" class="secondary">公会大厅</button>
+    <button data-tab="heroes" class="secondary">冒险者</button>
+    <button data-tab="tasks" class="secondary">委托任务</button>
+    <button data-tab="base" class="secondary">据点经营</button>
+    <button data-tab="map" class="secondary">世界地图</button>
+    <button data-tab="log" class="secondary">事件记录</button>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="main"></div>
+    <div>
+      <div class="card">
+        <h2>当前局势</h2>
+        <div class="smallgrid" id="quick"></div>
+        <div class="item" id="mapinfo" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2>提示</h2>
+        <p>据点经营是核心：农田、伐木场、采石场会产出资源，厨房和旅馆提升恢复，围墙提升防御，仓库决定你能囤多少。驻守成员会进一步提高产量。</p>
+        <div class="footer">单文件网页版版本可直接在手机浏览器运行，下面的安卓工程会把它装进 WebView 里。后续还可以继续扩转职树、技能动画和更复杂的城市事件。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(()=> {
+const K='guild_base_tycoon_v5';
+const MAPS=[
+{name:'新手林地',lv:1,boss:'史莱姆王',hp:42,atk:4,g:[12,22],m:[0,1],f:[1,2],drop:'黏液结晶'},
+{name:'哥布林丘陵',lv:2,boss:'哥布林萨满',hp:64,atk:6,g:[20,34],m:[1,2],f:[2,4],drop:'粗糙短刃'},
+{name:'古墓遗迹',lv:3,boss:'骷髅将军',hp:92,atk:8,g:[30,50],m:[2,4],f:[4,6],drop:'骨纹护符'},
+{name:'兽人要塞',lv:4,boss:'兽人督军',hp:128,atk:11,g:[48,72],m:[3,5],f:[6,9],drop:'战锤零件'},
+{name:'深渊裂口',lv:5,boss:'深渊守门者',hp:176,atk:14,g:[70,108],m:[5,8],f:[9,13],drop:'深渊核心'}
+];
+const BUILDINGS={
+farm:{n:'农田',i:'🌾',d:'产出粮食。',g:40,m:2,b:{food:2},p:{food:2,morale:1}},
+lumber:{n:'伐木场',i:'🪵',d:'产出木材。',g:42,m:2,b:{wood:2},p:{wood:2,morale:1}},
+quarry:{n:'采石场',i:'🪨',d:'产出石料。',g:46,m:2,b:{stone:2},p:{stone:2,morale:1}},
+kitchen:{n:'厨房',i:'🍲',d:'提高恢复与粮食利用。',g:48,m:3,b:{morale:1},p:{morale:1,heal:1}},
+inn:{n:'旅馆',i:'🏚️',d:'提高休整恢复。',g:54,m:3,b:{morale:1},p:{rest:1,morale:1}},
+warehouse:{n:'仓库',i:'📦',d:'扩大容量。',g:58,m:4,b:{capacity:20},p:{capacity:20}},
+wall:{n:'围墙',i:'🧱',d:'提高防御。',g:70,m:5,b:{defense:5},p:{defense:8}},
+workshop:{n:'工坊',i:'⚒️',d:'制作与强化。',g:66,m:4,b:{craft:1},p:{craft:1,quality:1}},
+shrine:{n:'祈愿台',i:'✨',d:'提高士气。',g:52,m:3,b:{morale:2},p:{morale:2,luck:1}},
+market:{n:'集市',i:'🏪',d:'提升贸易收入。',g:60,m:4,b:{trade:1},p:{trade:1,income:3}}
+};
+const QUESTS=[
+{id:'raid1',t:'清理史莱姆',d:'击败 1 次远征。',k:'raid',n:1,r:{g:[24,36],m:[0,1],f:[2,3]}},
+{id:'train1',t:'成员特训',d:'训练 3 次。',k:'train',n:3,r:{g:[30,44],m:[1,2],f:[2,4]}},
+{id:'equip1',t:'武装公会',d:'装备或调整 2 次。',k:'equip',n:2,r:{g:[34,50],m:[2,4],f:[3,5]}},
+{id:'base1',t:'修建据点',d:'完成 2 次建筑升级。',k:'build',n:2,r:{g:[38,54],m:[2,4],f:[3,6]}},
+{id:'map1',t:'推进地图',d:'地图推进 1 次。',k:'mapup',n:1,r:{g:[48,66],m:[2,4],f:[5,8]}}
+];
+const HEROES=[
+{name:'见习剑士',r:'战士',hp:34,atk:7,def:2,c:34,s:'旋风斩'},
+{name:'森林弓手',r:'射手',hp:27,atk:8,def:1,c:41,s:'穿透箭'},
+{name:'学徒法师',r:'法师',hp:23,atk:10,def:0,c:48,s:'奥术爆发'},
+{name:'流浪盾卫',r:'坦克',hp:42,atk:5,def:5,c:56,s:'护卫姿态'},
+{name:'游侠猎人',r:'游侠',hp:30,atk:9,def:2,c:59,s:'连环射击'}
+];
+const EQUIP=[
+{name:'破旧铁剑',slot:'weapon',atk:2,def:0,hp:0,p:20},
+{name:'猎弓',slot:'weapon',atk:3,def:0,hp:0,p:28},
+{name:'法杖',slot:'weapon',atk:4,def:0,hp:0,p:36},
+{name:'皮甲',slot:'armor',atk:0,def:2,hp:4,p:24},
+{name:'锁子甲',slot:'armor',atk:0,def:3,hp:8,p:38},
+{name:'冒险护符',slot:'accessory',atk:1,def:1,hp:6,p:32}
+];
+const S=()=>({day:1,gold:180,mats:14,wood:10,stone:10,food:12,fame:0,morale:50,defense:10,prosperity:0,guildLv:1,trainingLv:1,forgeLv:0,innLv:0,barracksLv:0,mapLv:1,active:'hub',heroes:[H('艾琳','战士',36,7,2,2),H('洛克','坦克',44,5,4,1)],inventory:[],quests:Q(),q:{raid:0,train:0,equip:0,mapup:0,build:0},b:{farm:{lv:1,w:1},lumber:{lv:1,w:0},quarry:{lv:1,w:0},kitchen:{lv:1,w:0},inn:{lv:1,w:0},warehouse:{lv:1,w:0},wall:{lv:1,w:0},workshop:{lv:1,w:0},shrine:{lv:1,w:0},market:{lv:1,w:0}},log:[],event:null,last:Date.now()});
+function H(n,r,h,a,d,t){return{id:crypto.randomUUID(),n,r,maxHp:h,hp:h,atk:a,def:d,maxSta:100,sta:100,lvl:1,xp:0,next:30,sp:0,t:t,inj:0,rest:0,manaMax:40+t*4,mana:40+t*4,eq:{weapon:null,armor:null,accessory:null},station:null,s:skill(r)}}
+function skill(r){return{战士:'旋风斩',射手:'穿透箭',法师:'奥术爆发',坦克:'护卫姿态',游侠:'连环射击'}[r]||'基础斩击'}
+function Q(){return [...QUESTS].sort(()=>Math.random()-.5).slice(0,4).map(x=>({...x,done:false,claim:false}))}
+let s=load()||S();
+if(!s.q)s.q={raid:0,train:0,equip:0,mapup:0,build:0};
+if(!s.inventory)s.inventory=[];
+if(!s.event)s.event=null;
+if(!s.b)s.b=S().b;
+const fmt=n=>Math.floor(n).toLocaleString('zh-CN'),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),pct=(v,m)=>Math.max(0,Math.min(100,m<=0?0:v/m*100)),R=(a,b)=>Math.floor(a+Math.random()*(b-a+1));
+const save=()=>localStorage.setItem(K,JSON.stringify(s));
+const load=()=>{try{return JSON.parse(localStorage.getItem(K)||'null')}catch(e){return null}};
+const log=(t,c='')=>{s.log.unshift({t,c,ts:Date.now()});s.log=s.log.slice(0,120)};
+const curMap=()=>MAPS[cl(s.mapLv-1,0,MAPS.length-1)];
+const eqB=h=>{let a=0,d=0,hp=0;for(const k of ['weapon','armor','accessory']){const e=h.eq[k];if(e){a+=e.atk||0;d+=e.def||0;hp+=e.hp||0}}return{a,d,hp}};
+const pow=h=>{const b=eqB(h);return Math.floor((h.atk+b.a+h.def+b.d+(h.maxHp+b.hp)/10+h.lvl*2+h.sp*2)*(h.hp/Math.max(1,h.maxHp))*(h.sta/100))};
+const alive=()=>s.heroes.filter(h=>h.rest<=0&&h.hp>0);
+const party=()=>alive().filter(h=>h.sta>=30&&h.hp>h.maxHp*.35).slice(0,2+Math.floor(s.guildLv/2));
+const d=()=>({party:2+Math.floor(s.guildLv/2),recruit:30+s.guildLv*12,train:18+s.trainingLv*10,storage:4+s.barracksLv*2+s.b.warehouse.lv*8,rest:1+s.innLv+s.b.inn.lv,def:10+s.defense+s.b.wall.lv*8,morale:cl(s.morale+s.b.shrine.lv*2,0,100)});
+const up=(h)=>{while(h.xp>=h.next){h.xp-=h.next;h.lvl++;h.sp++;h.next=Math.floor(h.next*1.34);h.maxHp+=5+s.trainingLv;h.atk+=1+(h.r==='法师');h.def+=(h.r==='坦克');h.manaMax+=2+(h.r==='法师'?2:1);h.hp=h.maxHp;h.mana=h.manaMax;h.sta=cl(h.sta+12,0,100);log(`${h.n} 升到 Lv.${h.lvl}。`,`good`)}}
+function exp(h,x){h.xp+=x;up(h)}
+function heroCard(h){
+const b=eqB(h);
+return `<div class="item">
+<div class="head"><div><div class="name">${h.n}</div><div class="tag">${h.r} · Lv.${h.lvl} · ${h.s}${h.sp?` · 点数 ${h.sp}`:''}</div></div><div class="mini">${h.inj>0?'受伤中':h.rest>0?'休整中':'可行动'}</div></div>
+<div class="bar hp"><span style="width:${pct(h.hp,h.maxHp)}%"></span></div><div class="mini">HP ${h.hp}/${h.maxHp}${b.hp?` +${b.hp}`:''}</div>
+<div class="bar sta"><span style="width:${pct(h.sta,100)}%"></span></div><div class="mini">体力 ${h.sta}/100</div>
+<div class="bar mana"><span style="width:${pct(h.mana,h.manaMax)}%"></span></div><div class="mini">法力 ${h.mana}/${h.manaMax}</div>
+<div class="bar xp"><span style="width:${pct(h.xp,h.next)}%"></span></div><div class="mini">经验 ${h.xp}/${h.next} · 战力 ${pow(h)}</div>
+<div class="mini" style="margin-top:6px">武器：${h.eq.weapon?h.eq.weapon.name:'无'}｜护甲：${h.eq.armor?h.eq.armor.name:'无'}｜饰品：${h.eq.accessory?h.eq.accessory.name:'无'}</div>
+<div class="row" style="margin-top:8px">
+<button class="secondary" data-a="train" data-id="${h.id}">训练</button>
+<button class="secondary" data-a="rest" data-id="${h.id}">休息</button>
+<button class="secondary" data-a="sp" data-id="${h.id}">加点</button>
+</div></div>`;
+}
+function settlement(auto=false){
+s.day++;const bs=s.b, cnt=k=>s.heroes.filter(h=>h.station===k).length;
+let food=0,wood=0,stone=0,gold=0,mats=0;
+food+=2+(bs.farm.lv-1)*2+cnt('farm')*2; wood+=2+(bs.lumber.lv-1)*2+cnt('lumber')*2; stone+=2+(bs.quarry.lv-1)*2+cnt('quarry')*2;
+gold+=4+(bs.market.lv-1)*3+cnt('market')*4; mats+=1+Math.floor((bs.workshop.lv-1)*1.5)+cnt('workshop');
+s.food+=food;s.wood+=wood;s.stone+=stone;s.gold+=gold+10+s.guildLv*4+Math.floor(s.fame/8);s.mats+=mats;s.morale=cl(s.morale+bs.shrine.lv*2-1,0,100);s.defense=10+s.defense+bs.wall.lv*8;s.prosperity+=Math.max(1,Math.floor((food+wood+stone+gold)/20));
+s.heroes.forEach(h=>{if(h.rest>0)h.rest--;if(h.inj>0)h.inj--;h.sta=cl(h.sta+1+s.innLv+bs.inn.lv,0,100);h.mana=cl(h.mana+2+Math.floor((s.innLv+bs.inn.lv)/2),0,h.manaMax);h.hp=cl(h.hp+Math.floor(1+bs.kitchen.lv/2),0,h.maxHp)});
+const upkeep=Math.max(1,Math.floor(s.heroes.length/3)); s.food=Math.max(0,s.food-upkeep);
+if(Math.random()<.18){s.food+=R(1,4);log('商队送来粮食。','good')}
+if(Math.random()<.15){s.wood+=R(1,3);log('伐木队带回木材。','good')}
+if(Math.random()<.12){s.stone+=R(1,2);log('采石队发现石脉。','good')}
+if(Math.random()<.24){const e=evt();e.f();log(e.t,e.c)}
+if(Math.random()<.1){const h=pick();if(h){exp(h,6+s.trainingLv);log(`${h.n} 在巡逻中获得经验。`,'good')}}
+const over=Math.max(0,(s.food+s.wood+s.stone)-d().storage);if(over>0){const loss=Math.min(over,6);if(s.food>=loss)s.food-=loss;else if(s.wood>=loss)s.wood-=loss;else s.stone=Math.max(0,s.stone-loss);log('仓库不足，部分资源损耗。','warn')}
+const threat=Math.max(0,20-Math.floor(d().def/4)-Math.floor(s.morale/10));
+if(Math.random()*100<threat){const loss=R(8,18);s.gold=Math.max(0,s.gold-loss);s.morale=Math.max(0,s.morale-3);log(`夜袭发生，损失 ${loss} 金币。`,'bad')}
+sync()
+}
+function evt(){const p=[
+{c:'good',t:'村民献上供奉，获得 18 金币。',f:()=>s.gold+=18},
+{c:'good',t:'巡逻队带回 4 材料。',f:()=>s.mats+=4},
+{c:'good',t:'切磋后，一名成员获得经验。',f:()=>{const h=pick();if(h)exp(h,16)}},
+{c:'warn',t:'旅途中迷路，消耗 1 粮食。',f:()=>s.food=Math.max(0,s.food-1)},
+{c:'bad',t:'怪物夜袭，损失 12 金币。',f:()=>s.gold=Math.max(0,s.gold-12)},
+{c:'warn',t:'训练器械损坏，消耗 2 材料。',f:()=>s.mats=Math.max(0,s.mats-2)}];
+return p[Math.floor(Math.random()*p.length)]}
+function pick(){const hs=s.heroes.filter(h=>h.hp>0);return hs.length?hs[Math.floor(Math.random()*hs.length)]:null}
+function sync(){s.quests.forEach(q=>{if(q.k==='raid'&&s.q.raid>=q.n)q.done=true;if(q.k==='train'&&s.q.train>=q.n)q.done=true;if(q.k==='equip'&&s.q.equip>=q.n)q.done=true;if(q.k==='mapup'&&s.q.mapup>=q.n)q.done=true;if(q.k==='build'&&s.q.build>=q.n)q.done=true})}
+function complete(q){const g=R(q.r.g[0],q.r.g[1]),m=R(q.r.m[0],q.r.m[1]),f=R(q.r.f[0],q.r.f[1]);s.gold+=g;s.mats+=m;s.fame+=f;q.claim=true;log(`完成委托《${q.t}》，获得 ${g} 金币、${m} 材料、${f} 名望。`,'good')}
+function currentBuilding(key){const b=BUILDINGS[key],lv=s.b[key].lv;const out={};for(const k of Object.keys({...b.b,...b.p}))out[k]=(b.b[k]||0)+(lv-1)*(b.p[k]||0)+s.b[key].w;return out}
+function cost(key){const b=BUILDINGS[key],lv=s.b[key].lv;return{g:b.g+(lv-1)*Math.floor(b.g*.55),m:b.m+(lv-1)*Math.floor(b.m*.5)}}
+function recruit(){const c=30+s.guildLv*12+R(0,18);if(s.gold<c)return log('金币不足，无法招募。','bad');if(s.heroes.length>=d().storage+d().party)return log('据点已满，先升级仓库或兵营。','warn');s.gold-=c;const t=HEROES[R(0,HEROES.length-1)],h=H(''+'冒险者'+R(10,99),t.r,t.hp,t.atk,t.def,Math.ceil(t.c/18));h.s=t.s;h.maxHp+=s.trainingLv*2;h.atk+=Math.floor(s.guildLv/2);h.def+=Math.floor(s.innLv/2);s.heroes.push(h);log(`招募到 ${h.n}（${h.r}），花费 ${c} 金币。`,'good');render()}
+function train(id){const h=s.heroes.find(x=>x.id===id);if(!h)return;const c=18+s.trainingLv*10;if(s.gold<c)return log('金币不足，无法训练。','bad');if(h.sta<20)return log(`${h.n} 太疲劳，先休息。`,'warn');s.gold-=c;h.sta=cl(h.sta-16,0,100);h.mana=cl(h.mana-4,0,h.manaMax);exp(h,12+s.trainingLv*4);s.q.train++;log(`${h.n} 完成训练。`,'good');sync();render()}
+function rest(id){const h=s.heroes.find(x=>x.id===id);if(!h)return;const rr=d();h.hp=cl(h.hp+10+rr.rest*2,0,h.maxHp);h.sta=cl(h.sta+24+rr.rest*3,0,100);h.mana=cl(h.mana+14+rr.rest*2,0,h.manaMax);h.inj=Math.max(0,h.inj-1);h.rest=0;log(`${h.n} 休息恢复。`,'good');render()}
+function spend(id,kind){const h=s.heroes.find(x=>x.id===id);if(!h||h.sp<=0)return;if(kind==='atk')h.atk++;if(kind==='def')h.def++;if(kind==='hp'){h.maxHp+=6;h.hp=h.maxHp}if(kind==='mana'){h.manaMax+=6;h.mana=h.manaMax}h.sp--;log(`${h.n} 完成强化。`,'good');render()}
+function equip(id,item){const h=s.heroes.find(x=>x.id===id);if(!h)return;const slot=item.slot,old=h.eq[slot];h.eq[slot]=item;if(old)s.inventory.push(old);s.q.equip++;log(`${h.n} 装备了 ${item.name}。`,'good');sync();render()}
+function unequip(id,slot){const h=s.heroes.find(x=>x.id===id);if(!h||!h.eq[slot])return;const old=h.eq[slot];h.eq[slot]=null;s.inventory.push(old);log(`${h.n} 卸下 ${old.name}。`,'warn');render()}
+function autoEquip(item){const h=s.heroes.slice().sort((a,b)=>(a.hp/a.maxHp+a.sta/100)-(b.hp/b.maxHp+b.sta/100))[0];if(!h){s.inventory.push(item);return}const cur=h.eq[item.slot],cs=cur?((cur.atk||0)+(cur.def||0)+(cur.hp||0)):0,ns=(item.atk||0)+(item.def||0)+(item.hp||0);if(!cur||ns>=cs){h.eq[item.slot]=item;log(`${h.n} 直接装备了 ${item.name}。`,'good')}else{s.inventory.push(item);log(`${item.name} 存入仓库。`,'warn')}}
+function drop(lv){const b=EQUIP[Math.floor(Math.random()*EQUIP.length)],boost=Math.max(0,lv-1);return{...b,atk:(b.atk||0)+boost,def:(b.def||0)+Math.floor(boost/2),hp:(b.hp||0)+boost*2,p:b.p+boost*6}}
+function useSkill(h){const r=.18+h.sp*.02;if(h.r==='法师')return{m:14,mul:1.45+r,heal:0};if(h.r==='坦克')return{m:10,mul:1.10+r,heal:0};if(h.r==='射手')return{m:12,mul:1.35+r,heal:0};if(h.r==='游侠')return{m:10,mul:1.25+r,heal:6+h.sp};return{m:11,mul:1.20+r,heal:0}}
+function raid(){const m=curMap(),p=party();if(!p.length)return log('没有可出征的队伍。','warn');if(s.food<p.length)return log('粮食不足，无法远征。','bad');s.food-=p.length;p.forEach(h=>{h.sta=cl(h.sta-18,0,100);h.rest=2});let ehp=m.hp+R(0,10),eatk=m.atk+Math.floor(s.mapLv/2),round=0,v=false;while(round<10&&ehp>0&&p.some(h=>h.hp>0)){round++;const live=p.filter(h=>h.hp>0);let dmg=0;live.forEach(h=>{const b=eqB(h),sk=useSkill(h),use=Math.min(h.mana,sk.m);const mul=use>=sk.m?sk.mul:1;const base=h.atk+b.a+h.lvl+Math.floor(h.sp/2)+R(-1,3);const dd=Math.max(1,Math.floor(base*mul+(h.def+b.d)*.15));h.mana=cl(h.mana-use,0,h.manaMax);dmg+=dd;if(sk.heal)h.hp=cl(h.hp+sk.heal,0,h.maxHp)});ehp-=dmg;if(ehp<=0){v=true;break}const def=live.reduce((z,h)=>z+h.def+eqB(h).d+(h.r==='坦克'?2:0),0)/Math.max(1,live.length);const hit=Math.max(1,Math.floor(eatk+R(0,4)-def-Math.floor(d().def/10)));const t=live.sort((a,b)=>a.hp-b.hp)[0];if(t){t.hp=cl(t.hp-hit,1,t.maxHp);if(t.hp<=t.maxHp*.25)t.inj=Math.max(t.inj,3)}}const gold=v?R(m.g[0],m.g[1])+s.guildLv*4+s.forgeLv*3:R(6,14),mats=v?R(m.m[0],m.m[1])+Math.floor(s.guildLv/2):0,fame=v?R(m.f[0],m.f[1]):0;s.gold+=gold;s.mats+=mats;s.fame+=fame;p.forEach((h,i)=>{const lost=Math.floor(h.maxHp*(v?R(10,20):R(20,38))/100*(.85+i*.07));h.hp=cl(h.hp-lost,1,h.maxHp);if(lost>h.maxHp*.35){h.inj=3;h.rest=Math.max(h.rest,3)}exp(h,v?10+s.mapLv*3:4+s.mapLv)});if(v){s.q.raid++;if(Math.random()<.72){const it=drop(m.lv);autoEquip(it)}if(s.mapLv<MAPS.length&&Math.random()<.55){s.mapLv++;s.q.mapup++}log(`远征胜利！获得 ${gold} 金币、${mats} 材料、${fame} 名望。`,'good')}else log(`远征失败，但仍带回 ${gold} 金币。`,'bad');if(s.fame>=20*s.guildLv){s.guildLv++;log(`名望突破，公会自动升到 Lv.${s.guildLv}。`,'good')}s.event={title:v?'远征结果':'撤退结果',text:`${m.name} · ${v?'队伍带回战利品。':'队伍受挫撤离。'}`};sync();render()}
+function claim(id){const q=s.quests.find(x=>x.id===id);if(!q||!q.done||q.claim)return;complete(q);render()}
+function upgradeBuilding(key){const c=cost(key);if(s.gold<c.g||s.mats<c.m)return log('资源不足，无法升级建筑。','bad');s.gold-=c.g;s.mats-=c.m;s.b[key].lv++;if(key==='wall')s.defense+=3;s.q.build++;log(`${BUILDINGS[key].n} 升到 Lv.${s.b[key].lv}。`,'good');sync();render()}
+function assign(key){const cur=s.heroes.find(h=>h.station===key);if(cur){cur.station=null;log(`${cur.n} 从 ${BUILDINGS[key].n} 撤回。`,'warn')}else{const h=s.heroes.find(x=>!x.station);if(!h)return log('没有空闲成员可派驻。','warn');h.station=key;log(`${h.n} 被派驻到 ${BUILDINGS[key].n}。`,'good')}render()}
+function autoAssign(){s.heroes.forEach(h=>h.station=null);['farm','lumber','quarry','kitchen','inn','warehouse','wall','workshop','shrine','market'].forEach((k,i)=>{if(s.heroes[i])s.heroes[i].station=k});log('已自动分配驻守成员。','good');render()}
+function distribute(){const c=x=>s.heroes.filter(h=>h.station===x).length;let food=0,wood=0,stone=0,gold=0,mats=0;food+=2+(s.b.farm.lv-1)*2+c('farm')*2;wood+=2+(s.b.lumber.lv-1)*2+c('lumber')*2;stone+=2+(s.b.quarry.lv-1)*2+c('quarry')*2;gold+=4+(s.b.market.lv-1)*3+c('market')*4;mats+=1+Math.floor((s.b.workshop.lv-1)*1.5)+c('workshop');s.food+=food;s.wood+=wood;s.stone+=stone;s.mats+=mats;s.gold+=gold+10+s.guildLv*4+Math.floor(s.fame/8);s.morale=cl(s.morale+s.b.shrine.lv*2-1,0,100);s.defense=10+s.defense+s.b.wall.lv*8;s.prosperity+=Math.max(1,Math.floor((food+wood+stone+gold)/20));s.heroes.forEach(h=>{if(h.station==='kitchen')h.hp=cl(h.hp+2,0,h.maxHp);if(h.station==='shrine')h.sta=cl(h.sta+2,0,100)})}
+function baseDay(manual=false){distribute();s.heroes.forEach(h=>{if(h.rest>0)h.rest--;if(h.inj>0)h.inj--;h.sta=cl(h.sta+1+s.innLv+s.b.inn.lv,0,100);h.mana=cl(h.mana+2+Math.floor((s.innLv+s.b.inn.lv)/2),0,h.manaMax);h.hp=cl(h.hp+Math.floor(1+s.b.kitchen.lv/2),0,h.maxHp)});if(Math.random()<.18){s.food+=R(1,4);log('商队送来粮食。','good')}if(Math.random()<.15){s.wood+=R(1,3);log('伐木队带回木材。','good')}if(Math.random()<.12){s.stone+=R(1,2);log('采石队发现石脉。','good')}if(Math.random()<.24){const e=evt();e.f();log(e.t,e.c)}if(Math.random()<.08)s.quests=Q();const over=Math.max(0,(s.food+s.wood+s.stone)-d().storage);if(over>0){const loss=Math.min(over,6);if(s.food>=loss)s.food-=loss;else if(s.wood>=loss)s.wood-=loss;else s.stone=Math.max(0,s.stone-loss);log('仓库不足，部分资源损耗。','warn')}const threat=Math.max(0,20-Math.floor(d().def/4)-Math.floor(s.morale/10));if(Math.random()*100<threat){const loss=R(8,18);s.gold=Math.max(0,s.gold-loss);s.morale=Math.max(0,s.morale-3);log(`夜袭发生，损失 ${loss} 金币。`,'bad')}}
+function nextDay(){s.day++;baseDay();s.food=Math.max(0,s.food-Math.max(1,Math.floor(s.heroes.length/3)));sync()}
+function renderStats(){document.getElementById('stats').innerHTML=[['第 '+s.day+' 天','日数'],[fmt(s.gold),'金币'],[fmt(s.mats),'材料'],[fmt(s.food),'粮食'],[fmt(s.wood),'木材'],[fmt(s.stone),'石料'],[fmt(s.fame),'名望'],[s.morale+'%','士气'],[d().def,'防御'],[s.prosperity,'繁荣']].map(([v,l])=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('')}
+function renderQuick(){const m=curMap(),dd=d(),bs=Object.entries(s.b).slice(0,3).map(([k,v])=>`${BUILDINGS[k].n} Lv.${v.lv}`).join('｜');document.getElementById('quick').innerHTML=[`<div class="chip">出征上限：${dd.party} 人</div>`,`<div class="chip">驻地容量：${dd.storage+dd.party}</div>`,`<div class="chip">当前防御：${dd.def}</div>`,`<div class="chip">当前士气：${dd.morale}</div>`,`<div class="chip">地图：${m.name}</div>`,`<div class="chip">建筑：${bs}</div>`].join('');document.getElementById('mapinfo').innerHTML=`<div class="name">${m.name}</div><div class="mini">头目：${m.boss}</div><div class="mini">收益：金币 ${m.g[0]}-${m.g[1]}｜材料 ${m.m[0]}-${m.m[1]}｜名望 ${m.f[0]}-${m.f[1]}</div><div class="mini">掉落：${m.drop}</div><div style="margin-top:8px" class="mapline">${MAPS.map((x,i)=>`<span class="chip" style="background:${i+1===s.mapLv?'rgba(124,156,255,.18)':'rgba(255,255,255,.03)'};color:${i+1===s.mapLv?'#eef2ff':'var(--muted)'}">${x.name}</span>`).join('')}</div>`}
+function renderHub(){const p=party();document.getElementById('main').innerHTML=`<h2>公会大厅</h2><div class="mini">这里负责招募、出征、领取补给和查看头目情报。</div><div class="row" style="margin:10px 0"><button id="recruit" class="good">招募冒险者</button><button id="raid2" class="warn">开始远征</button><button id="claim2" class="secondary">领取补给</button><button id="story" class="secondary">头目情报</button></div><div class="mini">可出征成员：${p.length}/${d().party}｜队伍战力：${fmt(p.reduce((z,h)=>z+pow(h),0))}</div><div class="list">${s.heroes.map(heroCard).join('')}</div>`}
+function renderHeroes(){const inv=s.inventory.length?s.inventory.map((it,idx)=>`<div class="item"><div class="head"><div><div class="name">${it.name}</div><div class="tag">${it.slot==='weapon'?'武器':it.slot==='armor'?'护甲':'饰品'}</div></div><div class="mini">价值 ${it.p} 金币</div></div><div class="mini">Atk +${it.atk||0} · Def +${it.def||0} · HP +${it.hp||0}</div><div class="row" style="margin-top:8px"><button class="secondary" data-sell="${idx}">出售</button></div></div>`).join(''):'<div class="mini">仓库暂无物品。</div>';const hs=s.heroes.map(h=>{const b=eqB(h);return `<div class="item"><div class="head"><div><div class="name">${h.n}</div><div class="tag">${h.r} · Lv.${h.lvl} · ${h.s}</div></div><div class="mini">战力 ${pow(h)} · 点数 ${h.sp}</div></div><div class="two"><div class="item"><div class="mini">武器：${h.eq.weapon?h.eq.weapon.name:'无'}</div><div class="mini">护甲：${h.eq.armor?h.eq.armor.name:'无'}</div><div class="mini">饰品：${h.eq.accessory?h.eq.accessory.name:'无'}</div></div><div class="item"><div class="mini">HP ${h.hp}/${h.maxHp}${b.hp?` +${b.hp}`:''}</div><div class="mini">体力 ${h.sta}/100</div><div class="mini">法力 ${h.mana}/${h.manaMax}</div></div></div><div class="row" style="margin-top:8px"><button class="secondary" data-s="atk" data-id="${h.id}" ${h.sp<=0?'disabled':''}>攻击+1</button><button class="secondary" data-s="def" data-id="${h.id}" ${h.sp<=0?'disabled':''}>防御+1</button><button class="secondary" data-s="hp" data-id="${h.id}" ${h.sp<=0?'disabled':''}>生命+6</button><button class="secondary" data-s="mana" data-id="${h.id}" ${h.sp<=0?'disabled':''}>法力+6</button><button class="secondary" data-unequip-all="${h.id}">整理装备</button></div><div class="row" style="margin-top:8px">${s.inventory.map((it,idx)=>`<button class="secondary" data-equip="${idx}" data-id="${h.id}">装备 ${it.name}</button>`).join('')}</div></div>`}).join('');document.getElementById('main').innerHTML=`<h2>冒险者与仓库</h2><div class="mini">这里管理角色、装备和仓库。</div><div class="list">${hs}</div><h2 style="margin-top:12px">仓库</h2><div class="list">${inv}</div>`}
+function renderTasks(){document.getElementById('main').innerHTML=`<h2>委托任务</h2><div class="row" style="margin:10px 0"><button id="refreshQ" class="secondary">刷新任务</button><button id="claimAll" class="good">领取已完成</button></div><div class="mini">进度：远征 ${s.q.raid}｜训练 ${s.q.train}｜装备 ${s.q.equip}｜推进 ${s.q.mapup}｜建筑 ${s.q.build}</div><div class="list">${s.quests.map(q=>`<div class="item"><div class="head"><div><div class="name">${q.t}</div><div class="tag">${q.k}</div></div><div class="mini">${q.done?(q.claim?'已领取':'可领取'):'进行中'}</div></div><div class="mini">${q.d}</div><div class="mini">奖励：金币 ${q.r.g[0]}-${q.r.g[1]}，材料 ${q.r.m[0]}-${q.r.m[1]}，名望 ${q.r.f[0]}-${q.r.f[1]}</div><div class="row" style="margin-top:8px"><button class="${q.done&&!q.claim?'good':'secondary'}" data-q="${q.id}" ${(!q.done||q.claim)?'disabled':''}>领取</button></div></div>`).join('')}</div>`}
+function renderBase(){document.getElementById('main').innerHTML=`<h2>据点经营</h2><div class="row" style="margin:10px 0"><button id="baseClaim" class="secondary">领取日常产出</button><button id="baseAuto" class="secondary">自动分配驻守</button></div><div class="mini">仓库容量：${d().storage}｜当前防御：${d().def}｜当前士气：${d().morale}</div><div class="list">${Object.keys(BUILDINGS).map(k=>{const B=BUILDINGS[k],lv=s.b[k].lv,c=cost(k),o=currentBuilding(k),w=s.heroes.filter(h=>h.station===k),wn=w.length?w.map(h=>h.n).join('、'):'暂无驻守';return `<div class="item"><div class="head"><div><div class="name">${B.i} ${B.n} Lv.${lv}</div><div class="tag">驻守 ${w.length} 人</div></div><div class="mini">升级：${c.g} 金币 / ${c.m} 材料</div></div><div class="mini">${B.d}</div><div class="mini">产出：${Object.entries(o).map(([a,b])=>`${a}:${b}`).join(' ｜ ')||'无'}</div><div class="mini">驻守：${wn}</div><div class="prog"><span style="width:${Math.min(100,10+lv*18+w.length*12)}%"></span></div><div class="row" style="margin-top:8px"><button class="good" data-up="${k}">升级建筑</button><button class="secondary" data-as="${k}">切换驻守</button></div></div>`}).join('')}</div>`}
+function renderMap(){document.getElementById('main').innerHTML=`<h2>世界地图</h2><div class="list">${MAPS.map((m,i)=>`<div class="item"><div class="head"><div><div class="name">${m.name}</div><div class="tag">${i+1===s.mapLv?'当前地图':i+1<s.mapLv?'已解锁':'未解锁'}</div></div><div class="mini">头目：${m.boss}</div></div><div class="mini">收益：金币 ${m.g[0]}-${m.g[1]}｜材料 ${m.m[0]}-${m.m[1]}｜名望 ${m.f[0]}-${m.f[1]}</div><div class="mini">掉落：${m.drop}</div></div>`).join('')}</div><div class="row" style="margin-top:10px"><button id="mapRaid" class="warn">在当前地图远征</button><button id="mapStory" class="secondary">刷新情报</button></div>`}
+function renderLog(){document.getElementById('main').innerHTML=`<h2>事件记录</h2><div class="log">${s.log.length?s.log.map(e=>`<div class="entry ${e.c}">${new Date(e.ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})} · ${e.t}</div>`).join(''):'<div class="mini">暂无记录。</div>'}</div>`}
+function render(){renderStats();renderQuick();if(s.active==='hub')renderHub();else if(s.active==='heroes')renderHeroes();else if(s.active==='tasks')renderTasks();else if(s.active==='base')renderBase();else if(s.active==='map')renderMap();else renderLog();bind();save()}
+function bind(){
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{s.active=b.dataset.tab;render()});
+const a=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f};
+a('raid',raid);a('raid2',raid);a('save',()=>{save();log('游戏已保存。','good');render()});a('reset',()=>{localStorage.removeItem(K);location.reload()});a('recruit',recruit);a('claim2',()=>{s.food+=2;s.gold+=8;log('领取补给：2 粮食、8 金币。','good');render()});a('story',()=>{const m=curMap();s.event={title:'头目情报',text:`当前地图：${m.name}。头目是 ${m.boss}。`};render()});a('refreshQ',()=>{s.quests=Q();s.q={raid:0,train:0,equip:0,mapup:0,build:0};log('委托已刷新。','warn');render()});a('claimAll',()=>{s.quests.filter(q=>q.done&&!q.claim).forEach(complete);render()});a('baseClaim',()=>{baseDay(true);log('领取据点产出。','good');render()});a('baseAuto',()=>{s.heroes.forEach(h=>h.station=null);['farm','lumber','quarry','kitchen','inn','warehouse','wall','workshop','shrine','market'].forEach((k,i)=>{if(s.heroes[i])s.heroes[i].station=k});log('已自动分配驻守成员。','good');render()});a('mapRaid',raid);a('mapStory',()=>{const m=curMap();s.event={title:'头目情报',text:`当前地图：${m.name}。头目是 ${m.boss}。`};render()});
+document.querySelectorAll('[data-a="train"]').forEach(b=>b.onclick=()=>train(b.dataset.id));document.querySelectorAll('[data-a="rest"]').forEach(b=>b.onclick=()=>rest(b.dataset.id));document.querySelectorAll('[data-a="sp"]').forEach(b=>b.onclick=()=>spend(b.dataset.id,'atk'));document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>spend(b.dataset.id,b.dataset.s));document.querySelectorAll('[data-unequip-all]').forEach(b=>b.onclick=()=>{const h=s.heroes.find(x=>x.id===b.dataset.unequipAll);if(!h)return;const slot=['weapon','armor','accessory'].find(k=>h.eq[k]);if(!slot)return log('此成员没有可整理的装备。','warn');s.inventory.push(h.eq[slot]);log(`${h.n} 卸下 ${h.eq[slot].name}。`,'warn');h.eq[slot]=null;render()});document.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{const h=s.heroes.find(x=>x.id===b.dataset.id),it=s.inventory[+b.dataset.equip];if(!h||!it)return;s.inventory.splice(+b.dataset.equip,1);equip(h.id,it)});document.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const it=s.inventory[+b.dataset.sell];if(!it)return;s.gold+=Math.max(5,Math.floor(it.p*.7));s.inventory.splice(+b.dataset.sell,1);log(`出售 ${it.name}。`,'good');render()});document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>claim(b.dataset.q));document.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>upgradeBuilding(b.dataset.up));document.querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>assign(b.dataset.as))}
+function claimQuest(id){claim(id);render()}
+function upgradeBuildingWrap(key){upgradeBuilding(key)}
+function assign(key){const cur=s.heroes.find(h=>h.station===key);if(cur){cur.station=null;log(`${cur.n} 从 ${BUILDINGS[key].n} 撤回。`,'warn')}else{const h=s.heroes.find(x=>!x.station);if(!h)return log('没有空闲成员可派驻。','warn');h.station=key;log(`${h.n} 被派驻到 ${BUILDINGS[key].n}。`,'good')}render()}
+window.claimQuest=claimQuest;
+window.upgradeBuilding=upgradeBuildingWrap;
+window.assign=assign;
+function train(id){const h=s.heroes.find(x=>x.id===id);if(!h)return;const c=18+s.trainingLv*10;if(s.gold<c)return log('金币不足，无法训练。','bad');if(h.sta<20)return log(`${h.n} 太疲劳，先休息。`,'warn');s.gold-=c;h.sta=cl(h.sta-16,0,100);h.mana=cl(h.mana-4,0,h.manaMax);exp(h,12+s.trainingLv*4);s.q.train++;log(`${h.n} 完成训练。`,'good');sync();render()}
+function rest(id){const h=s.heroes.find(x=>x.id===id);if(!h)return;h.hp=cl(h.hp+10+d().rest*2,0,h.maxHp);h.sta=cl(h.sta+24+d().rest*3,0,100);h.mana=cl(h.mana+14+d().rest*2,0,h.manaMax);h.inj=Math.max(0,h.inj-1);h.rest=0;log(`${h.n} 休息恢复。`,'good');render()}
+function spend(id,k){const h=s.heroes.find(x=>x.id===id);if(!h||h.sp<=0)return;if(k==='atk')h.atk++;if(k==='def')h.def++;if(k==='hp'){h.maxHp+=6;h.hp=h.maxHp}if(k==='mana'){h.manaMax+=6;h.mana=h.manaMax}h.sp--;log(`${h.n} 完成强化。`,'good');render()}
+function equipByHero(id,it){const h=s.heroes.find(x=>x.id===id);if(!h)return;const slot=it.slot,old=h.eq[slot];h.eq[slot]=it;if(old)s.inventory.push(old);s.q.equip++;log(`${h.n} 装备了 ${it.name}。`,'good');sync();render()}
+window.equipByHero=equipByHero;
+function auto(){const a=alive();if(a.length){}}
+function renderHubButtons(){}
+function refreshQuest(){s.quests=Q();s.q={raid:0,train:0,equip:0,mapup:0,build:0};render()}
+function useQuestDone(){}
+window.nextDay=nextDay;
+if(!load())log('欢迎来到冒险者公会！先经营据点，再出门远征。','warn');else log('存档已载入。','good');
+s.event={title:'初始情报',text:`当前地图：${curMap().name}。据点经营与远征会互相影响。`};
+render();
+setInterval(()=>{const now=Date.now(),diff=now-s.last;if(diff>14000){const days=Math.min(4,Math.floor(diff/14000));for(let i=0;i<days;i++)nextDay();s.last=now;log(`时间流逝：经过 ${days} 天。`,'warn');render()}},2500);
+document.addEventListener('keydown',e=>{if(e.key==='s')save();if(e.key==='r'){localStorage.removeItem(K);location.reload()}});})();
+</script>
+</body>
+</html>
